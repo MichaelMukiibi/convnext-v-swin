@@ -85,7 +85,7 @@ def train_epoch(model, dataloader, optimizer, criterion, device):
 
 @torch.no_grad()
 def evaluate(model, dataloader, criterion, device):
-    """Evaluates the model and computes Loss, Accuracy, and AUC-ROC."""
+    """Evaluates the model and computes Loss, Accuracy, AUC-ROC, Sensitivity, and Specificity."""
     model.eval()
     running_loss = 0.0
     all_logits = []
@@ -106,15 +106,25 @@ def evaluate(model, dataloader, criterion, device):
     all_logits = torch.cat(all_logits, dim=0)
     all_labels = torch.cat(all_labels, dim=0)
 
-    # Calculate probabilities for AUC-ROC calculation
+    # Probabilities and Predictions
     probs = torch.softmax(all_logits, dim=1)[:, 1].numpy()
     preds = torch.argmax(all_logits, dim=1).numpy()
     labels_np = all_labels.numpy()
 
+    # Standard Metrics
     accuracy = accuracy_score(labels_np, preds)
     auc_roc = roc_auc_score(labels_np, probs)
 
-    return val_loss, accuracy, auc_roc
+    # Confusion Matrix: TN, FP, FN, TP
+    tn, fp, fn, tp = confusion_matrix(labels_np, preds).ravel()
+
+    # Sensitivity (True Positive Rate / Recall)
+    sensitivity = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+
+    # Specificity (True Negative Rate)
+    specificity = tn / (tn + fp) if (tn + fp) > 0 else 0.0
+
+    return val_loss, accuracy, auc_roc, sensitivity, specificity
 
 
 def run_experiment(model_alias, checkpoint, args, train_loader, val_loader, num_classes, device):
@@ -151,11 +161,14 @@ def run_experiment(model_alias, checkpoint, args, train_loader, val_loader, num_
     # 3. Training Loop
     for epoch in range(1, args.epochs + 1):
         train_loss = train_epoch(model, train_loader, optimizer, criterion, device)
-        val_loss, val_acc, val_auc = evaluate(model, val_loader, criterion, device)
+        val_loss, val_acc, val_auc, val_sens, val_spec = evaluate(model, val_loader, criterion, device)
 
-        print(f"[{model_alias}] Epoch {epoch:02d}/{args.epochs:02d} | "
-              f"Train Loss: {train_loss:.4f} | Val Loss: {val_loss:.4f} | "
-              f"Val Acc: {val_acc:.4f} | Val AUC: {val_auc:.4f}")
+        print(
+            f"[{model_alias}] Epoch {epoch:02d}/{args.epochs:02d} | "
+            f"Train Loss: {train_loss:.4f} | Val Loss: {val_loss:.4f} | "
+            f"Val Acc: {val_acc:.4f} | Val AUC: {val_auc:.4f} | "
+            f"Sens: {val_sens:.4f} | Spec: {val_spec:.4f}"
+        )   
 
         if use_wandb:
             wandb.log({
@@ -163,6 +176,8 @@ def run_experiment(model_alias, checkpoint, args, train_loader, val_loader, num_
                 f"{model_alias}/val_loss": val_loss,
                 f"{model_alias}/val_accuracy": val_acc,
                 f"{model_alias}/val_auc_roc": val_auc,
+                f"{model_alias}/val_sensitivity": val_sens,
+                f"{model_alias}/val_specificity": val_spec,
                 "epoch": epoch
             })
 
