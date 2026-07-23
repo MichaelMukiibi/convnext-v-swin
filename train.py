@@ -17,7 +17,7 @@ from torch.utils.data import DataLoader
 import torchvision.transforms as T
 import medmnist
 from medmnist import INFO
-from sklearn.metrics import roc_auc_score, accuracy_score
+from sklearn.metrics import roc_auc_score, accuracy_score, confusion_matrix
 from transformers import AutoModelForImageClassification
 import wandb
 
