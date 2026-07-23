@@ -63,4 +63,16 @@ colab run --gpu t4 -s medmnist-benchmark train.py \
 
   ```
 
-  
+# Sensitivity & Specificity - Clinical Implications in Healthcare Settings
+## Sensitivity (True Positive Rate)
+
+* **Definition**: Percentage of actual pneumonia cases correctly flagged by the model.
+* **Clinical Impact of False Negatives ($FN$)**: A patient with active pneumonia is diagnosed as healthy and sent home without antibiotics. This can lead to rapid disease progression, lung damage, sepsis, or death.
+* **Healthcare Priority: High**. In automated screening models, maximizing Sensitivity minimizes dangerous missed diagnoses.
+
+## Specificity (True Negative Rate)
+* **Definition**: Percentage of healthy chest X-rays correctly identified as normal.
+* **Clinical Impact of False Positives ($FP$)**: A healthy patient is incorrectly flagged with pneumonia.
+* **Healthcare Priority: Moderate.** A False Positive leads to unnecessary secondary chest CT scans, prolonged clinical review, unnecessary antibiotic exposure, and patient anxiety. While harmful, it is clinically preferable to missing an active infection.
+
+By default, classification decisions use a decision threshold of $0.5$ ($\hat{y} = 1$ if $P \ge 0.5$). However, in healthcare deployment, you can lower the threshold (e.g., to $0.20$ or $0.30$) to deliberately trade off Specificity in exchange for higher Sensitivity, ensuring the model flags any borderline abnormality for physician review.
